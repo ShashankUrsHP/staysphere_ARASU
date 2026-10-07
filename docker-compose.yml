@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: staysphere_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: staysphere
+      POSTGRES_PASSWORD: staysphere_secure_password
+      POSTGRES_DB: staysphere_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: staysphere_redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: staysphere_backend
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://staysphere:staysphere_secure_password@postgres:5432/staysphere_db
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=staysphere_super_secret_jwt_key_change_in_production
+      - CORS_ORIGINS=["http://localhost:5173","http://localhost:3000"]
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+
+volumes:
+  postgres_data:
